@@ -1,0 +1,97 @@
+from fastapi import FastAPI
+from pydantic import BaseModel
+from app.agent import detect_intent
+from app.rag import retrieve
+from app.llm import generate_reply
+import logging
+
+app = FastAPI()
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+class Message(BaseModel):
+    role: str
+    content: str
+
+
+class ChatRequest(BaseModel):
+    messages: list[Message]
+
+def build_search_query(messages):
+    user_messages = []
+
+    for msg in messages:
+        if msg.role == "user":
+            user_messages.append(msg.content)
+
+    return " ".join(user_messages)
+@app.get("/health")
+def health():
+    return {"status": "ok"}
+
+
+@app.post("/chat")
+def chat(req: ChatRequest):
+
+    latest_user_message = ""
+
+    for msg in reversed(req.messages):
+        if msg.role == "user":
+            latest_user_message = msg.content
+            break
+    logger.info(f"Intent: {intent}")
+    logger.info(f"Query: {search_query}")
+    logger.info(f"Retrieved: {len(docs)} documents")
+
+    intent = detect_intent(req.messages)
+    if intent == "clarify":
+        return {
+            "reply": (
+                "I'd be happy to help. "
+                "Could you tell me:\n"
+                "- Which role are you hiring for?\n"
+                "- Seniority level?\n"
+                "- Any specific technical or behavioural skills?"
+            ),
+            "recommendations": [],
+            "end_of_conversation": False
+        }
+    if intent == "refuse":
+        return {
+            "reply": (
+                "I'm designed to help only with SHL assessment "
+                "recommendations and comparisons."
+            ),
+            "recommendations": [],
+            "end_of_conversation": True
+        }
+    search_query = build_search_query(req.messages)
+    docs = retrieve(search_query)
+    answer = generate_reply(latest_user_message, docs)
+    questions = needs_clarification(req.messages)
+
+    if questions:
+        return {
+            "reply":"\n".join(questions),
+            "recommendations":[],
+            "end_of_conversation":False
+        }
+
+    recommendations = []
+
+    for d in docs:
+
+        recommendations.append(
+            {
+                "name": d["title"],
+                "url": d["url"],
+                "test_type": "Assessment"
+            }
+        )
+
+    return {
+        "reply": answer,
+        "recommendations": recommendations,
+        "end_of_conversation": False
+    }
+    
