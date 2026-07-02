@@ -1,13 +1,7 @@
 import re
 
+
 def detect_intent(messages):
-    """
-    Returns one of:
-    - clarify
-    - recommend
-    - compare
-    - refuse
-    """
 
     latest = ""
 
@@ -16,7 +10,6 @@ def detect_intent(messages):
             latest = msg.content.lower()
             break
 
-  
     if "compare" in latest or "difference" in latest:
         return "compare"
 
@@ -46,26 +39,28 @@ def detect_intent(messages):
     if latest.strip() in vague:
         return "clarify"
 
-    def needs_clarification(messages):
+    return "recommend"
 
-        text = " ".join(
+
+def needs_clarification(messages):
+
+    text = " ".join(
         m.content.lower()
         for m in messages
         if m.role == "user"
-        )
+    )
 
-        questions = []
+    questions = []
 
-        if not any(word in text for word in [
-            "developer", "engineer", "manager",
-            "analyst", "sales", "java", "python"
-        ]):
-            questions.append("What role are you hiring for?")
+    if not any(word in text for word in [
+        "developer", "engineer", "manager",
+        "analyst", "sales", "java", "python"
+    ]):
+        questions.append("What role are you hiring for?")
 
-        if not any(word in text for word in [
-            "junior", "mid", "senior", "years"
-        ]):
-            questions.append("What seniority level is the role?")
+    if not any(word in text for word in [
+        "junior", "mid", "senior", "years"
+    ]):
+        questions.append("What seniority level is the role?")
 
-        return questions
-    return "recommend"
+    return questions
