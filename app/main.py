@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
-from app.agent import detect_intent
+from app.agent import detect_intent, needs_clarification
 from app.rag import retrieve
 from app.llm import generate_reply
 import logging
@@ -39,9 +39,6 @@ def chat(req: ChatRequest):
         if msg.role == "user":
             latest_user_message = msg.content
             break
-    logger.info(f"Intent: {intent}")
-    logger.info(f"Query: {search_query}")
-    logger.info(f"Retrieved: {len(docs)} documents")
 
     intent = detect_intent(req.messages)
     if intent == "clarify":
@@ -67,6 +64,11 @@ def chat(req: ChatRequest):
         }
     search_query = build_search_query(req.messages)
     docs = retrieve(search_query)
+    logger.info(f"Intent: {intent}")
+    logger.info(f"Query: {search_query}")
+    logger.info(f"Retrieved: {len(docs)} documents")
+
+    intent = detect_intent(req.messages)
     answer = generate_reply(latest_user_message, docs)
     questions = needs_clarification(req.messages)
 
